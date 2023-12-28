@@ -1,5 +1,4 @@
 import SwiftUI
-import DebouncedOnChange
 
 //// Forked from https://github.com/CodeSlicing/pure-swift-ui/blob/dcad7b0a144af72ad7ef14323e8267b8d851477b/Sources/PureSwiftUI/Extensions/SwiftUI/Views/Modifiers/View%2BModifiers.swift#L611
 public extension View {
@@ -13,7 +12,7 @@ public extension View {
                 .onAppear {
                     geoCallback(geo)
                 }
-                .onChange(of: geo, debounceTime: 0.01) { geo in
+                .onChange(of: geo) { geo in
                     geoCallback(geo)
                 }
             .id(id)
