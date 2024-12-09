@@ -88,27 +88,3 @@ public extension View {
         modifier(GroupedFormStyleIfAvailableModifier())
     }
 }
-
-struct ToolbarHiddenIfAvailableModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        Group {
-            if #available(iOS 16, macOS 13, *) {
-                content
-                    .toolbar(.hidden)
-            } else {
-#if os(iOS)
-                content
-                    .navigationBarHidden(true)
-#else
-                content
-#endif
-            }
-        }
-    }
-}
-
-public extension View {
-    func toolbarHiddenIfAvailable() -> some View {
-        modifier(GroupedFormStyleIfAvailableModifier())
-    }
-}
