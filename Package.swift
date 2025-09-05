@@ -17,8 +17,8 @@ let package = Package(
         .target(
             name: "SwiftUtilities",
             dependencies: []),
-//        .testTarget(
-//            name: "SwiftUtilitiesTests",
-//            dependencies: ["SwiftUtilities"]),
+        .testTarget(
+            name: "SwiftUtilitiesTests",
+            dependencies: ["SwiftUtilities"]),
     ]
 )
