@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "SwiftUtilities",
-    platforms: [.macOS(.v13), .iOS(.v15)],
+    platforms: [.macOS("15.0"), .iOS(.v15)],
     products: [
         .library(
             name: "SwiftUtilities",
