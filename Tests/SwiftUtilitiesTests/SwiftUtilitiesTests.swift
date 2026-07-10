@@ -2,6 +2,20 @@ import XCTest
 import Combine
 @testable import SwiftUtilities
 
+final class StableHashTests: XCTestCase {
+    func testConsecutiveStringHashMatchesJoinedInput() {
+        let components = ["食べ", "られ", "ない"]
+
+        XCTAssertEqual(stableHash(components), stableHash(components.joined()))
+    }
+
+    func testStableHashHexUsesUppercaseAndTwoCharacterMinimumWidth() {
+        XCTAssertEqual(stableHashHex(0), "00")
+        XCTAssertEqual(stableHashHex(15), "0F")
+        XCTAssertEqual(stableHashHex(16), "10")
+    }
+}
+
 final class DebounceLeadingTrailingTests: XCTestCase {
     var cancellables: Set<AnyCancellable> = []
     
