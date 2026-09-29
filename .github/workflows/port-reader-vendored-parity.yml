@@ -34,17 +34,13 @@ jobs:
             Sources/SwiftUtilities/Fonts.swift \
             Sources/SwiftUtilities/ManabiSystemUIFontCSS.swift \
             'Sources/SwiftUtilities/NSViewRepresentable+WindowAccessor.swift'
-      - name: Catalyst typecheck changed production files
+      - name: Build package for Mac Catalyst
         shell: bash
         run: |
-          set -euo pipefail
-          SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
-          xcrun swiftc \
-            -sdk "$SDKROOT" \
-            -target arm64-apple-ios15.0-macabi \
-            -warnings-as-errors \
-            -typecheck \
-            Sources/SwiftUtilities/StableHash.swift \
-            Sources/SwiftUtilities/Fonts.swift \
-            Sources/SwiftUtilities/ManabiSystemUIFontCSS.swift \
-            'Sources/SwiftUtilities/NSViewRepresentable+WindowAccessor.swift'
+          set -o pipefail
+          xcodebuild \
+            -scheme SwiftUtilities \
+            -destination 'generic/platform=macOS,variant=Mac Catalyst' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
