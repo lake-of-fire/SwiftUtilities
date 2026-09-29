@@ -1,0 +1,33 @@
+name: Port Reader vendored SwiftUtilities parity
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Debug tests
+        run: swift test -c debug -Xswiftc -warnings-as-errors
+      - name: Release tests
+        run: swift test -c release -Xswiftc -warnings-as-errors
+      - name: Catalyst typecheck
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+          xcrun swiftc \
+            -sdk "$SDKROOT" \
+            -target arm64-apple-ios15.0-macabi \
+            -typecheck \
+            Sources/SwiftUtilities/*.swift
