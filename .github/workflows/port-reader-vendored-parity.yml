@@ -1,0 +1,46 @@
+name: Port Reader vendored SwiftUtilities parity
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Debug retained package tests
+        run: swift test -c debug
+      - name: Release retained package tests
+        run: swift test -c release
+      - name: Strict typecheck changed production files
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+          xcrun swiftc \
+            -sdk "$SDKROOT" \
+            -warnings-as-errors \
+            -typecheck \
+            Sources/SwiftUtilities/StableHash.swift \
+            Sources/SwiftUtilities/Fonts.swift \
+            Sources/SwiftUtilities/ManabiSystemUIFontCSS.swift \
+            'Sources/SwiftUtilities/NSViewRepresentable+WindowAccessor.swift'
+      - name: Build package for Mac Catalyst
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -scheme SwiftUtilities \
+            -destination 'generic/platform=macOS,variant=Mac Catalyst' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
