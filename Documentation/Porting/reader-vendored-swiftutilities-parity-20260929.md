@@ -14,7 +14,7 @@ Comparison against canonical `lake-of-fire/SwiftUtilities/main` showed:
 
 This PR ports only those Reader-owned production/test deltas into canonical main. It deliberately does not replace canonical `StableHash.swift` with Reader's older version.
 
-Qualification runs the complete package in macOS Debug and Release with warnings as errors and typechecks all production sources for Mac Catalyst (iOS 15 target).
+Qualification runs the complete package tests in macOS Debug and Release, strictly typechecks StableHash.swift and the three ported production files with warnings as errors, and builds the complete package for Mac Catalyst. The retained full-package tests allow existing unrelated canonical warnings.
 
 This makes canonical SwiftUtilities a usable convergence target for Reader and a public dependency fixture for Lake integration qualification.
 
