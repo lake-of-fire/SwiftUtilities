@@ -134,6 +134,8 @@ extension Font {
 
 #endif
 
+// Dormant font styling retained for local development.
+#if DEBUG
 struct SerifFontModifier: ViewModifier {
     let font: Font
     
@@ -154,3 +156,5 @@ public extension View {
         modifier(SerifFontModifier(font: font))
     }
 }
+
+#endif
