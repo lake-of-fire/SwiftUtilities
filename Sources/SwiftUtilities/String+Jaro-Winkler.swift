@@ -6,7 +6,8 @@
 public extension String {
     /// Jaro-Winkler distance between two strings, to evaluate a potential match
     /// - Parameter string: The other string to evaluate the distance from
-    /// - Returns: Double between 0 and 1. 0 means no match at all. 1 means a perfect equality between the two strings.
+    /// Matching is case-insensitive. Empty strings have no match, including with each other.
+    /// - Returns: Double between 0 and 1. 0 means no match at all. 1 means a perfect equality between nonempty strings.
     ///
     /// Useful links:
     /// - [Wikipedia](https://en.wikipedia.org/wiki/Jaro–Winkler_distance)
@@ -27,113 +28,49 @@ public extension String {
 /// Useful links:
 /// - [Wikipedia](https://en.wikipedia.org/wiki/Jaro–Winkler_distance)
 private struct JaroWinklerDistance {
-    var string1: String
-    var string2: String
-    var count1: Int { string1.count }
-    var count2: Int { string2.count }
-    let maxSpacing: Int
-    
+    let string1: [String]
+    let string2: [String]
+
     init(_ string1: String, _ string2: String) {
-        self.string1 = string1
-        self.string2 = string2
-        
-        maxSpacing = max(0, max(string1.count, string2.count) / 2 - 1)
+        self.string1 = string1.map { $0.lowercased() }
+        self.string2 = string2.map { $0.lowercased() }
     }
-    
-    func computeMatches() -> [Int] {
-        var matches = [Int]()
-        
-        for index in 0..<min(count1, count2) where match(at: index) {
-            matches.append(index)
-        }
-        
-        return matches
-    }
-    
-    /// Match when the range defined by index +/- maxSpacing contains the current character
-    func match(at index: Int) -> Bool {
-        let lowerBound = max(index - maxSpacing, 0)
-        let upperBound = min(index + maxSpacing, count1 - 1, count2 - 1)
-        let substring1 = string1[string1.index(string1.startIndex, offsetBy: index)].lowercased()
-        let lowerIndex = string2.index(string2.startIndex, offsetBy: lowerBound)
-        let upperIndex = string2.index(string2.startIndex, offsetBy: upperBound)
-        
-        for character in string2[lowerIndex..<upperIndex] where substring1 == character.lowercased() {
-            return true
-        }
-        return false
-    }
-    
-    func computeTranspositions(in matches: [Int]) -> Double {
-        var t = 0.0
-        
-        let matchesCount = matches.count
-        var index = 0
-        var matchesIndex = 0
-        
-        var iterator1 = string1.makeIterator()
-        var iterator2 = string2.makeIterator()
-        
-        while let char1 = iterator1.next(), let char2 = iterator2.next() {
-            defer { index += 1 }
-            guard matchesIndex < matchesCount else { break }
-            guard matches[matchesIndex] == index else { continue }
-            matchesIndex += 1
-            
-            if char1 != char2 {
-                t += 1
-            }
-        }
-        
-        return t / 2.0
-    }
-    
-    func computeJaroDistance(m: Int, t: Double) -> Double {
-        let m = Double(m)
-        let count1 = Double(self.count1)
-        let count2 = Double(self.count2)
-        
-        return (m/count1 + m/count2 + (m - t)/m) / 3.0
-    }
-    
-    func computeJaroWinklerDistance(dj: Double, p: Double = 0.1) -> Double {
-        let l = Double(computeCommonPrefixLength())
-        
-        return dj + (l * p * (1 - dj))
-    }
-    
-    /// Compute the `l` in the formulae
-    func computeCommonPrefixLength() -> Int {
-        var length = 0
-        let maxCount = min(4, count1, count2)
-        var count = 0
-        var index1 = string1.startIndex
-        var index2 = string2.startIndex
-        
-        while count < maxCount {
-            if string1[index1] == string2[index2] {
-                length += 1
-            } else {
+
+    func computeDistance() -> Double {
+        guard !string1.isEmpty, !string2.isEmpty else { return 0 }
+
+        let maxSpacing = max(0, max(string1.count, string2.count) / 2 - 1)
+        var matched1 = Array(repeating: false, count: string1.count)
+        var matched2 = Array(repeating: false, count: string2.count)
+        var matches = 0
+
+        for index in string1.indices {
+            let lowerBound = max(0, index - maxSpacing)
+            let upperBound = min(string2.count, index + maxSpacing + 1)
+            guard lowerBound < upperBound else { continue }
+
+            for candidate in lowerBound..<upperBound
+            where !matched2[candidate] && string1[index] == string2[candidate] {
+                matched1[index] = true
+                matched2[candidate] = true
+                matches += 1
                 break
             }
-            count += 1
-            index1 = string1.index(after: index1)
-            index2 = string2.index(after: index2)
         }
-        return length
-    }
-    
-    /// Compute the Jaro-Winkler distance between the two strings
-    func computeDistance() -> Double {
-        let matches = computeMatches()
-        
-        guard matches.count > 0 else {
-            return 0
-        }
-        
-        let t = computeTranspositions(in: matches)
-        let dj = computeJaroDistance(m: matches.count, t: t)
-        
-        return computeJaroWinklerDistance(dj: dj)
+
+        guard matches > 0 else { return 0 }
+
+        // Compare the matched subsequences in their original order, not original positions.
+        let sequence1 = string1.indices.filter { matched1[$0] }.map { string1[$0] }
+        let sequence2 = string2.indices.filter { matched2[$0] }.map { string2[$0] }
+        let transpositions = Double(zip(sequence1, sequence2).filter { $0.0 != $0.1 }.count) / 2
+        let m = Double(matches)
+        let jaro = (m / Double(string1.count) + m / Double(string2.count)
+                    + (m - transpositions) / m) / 3
+
+        // Winkler's prefix boost applies only to sufficiently similar strings.
+        guard jaro > 0.7 else { return jaro }
+        let prefixLength = zip(string1, string2).prefix(4).prefix { $0.0 == $0.1 }.count
+        return jaro + Double(prefixLength) * 0.1 * (1 - jaro)
     }
 }
