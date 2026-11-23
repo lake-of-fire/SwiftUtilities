@@ -13,17 +13,43 @@ import AppKit
 public struct WindowAccessor: NSViewRepresentable {
     private var binding: Binding<NSWindow?>
 
+    @MainActor
     public final class Coordinator {
-        fileprivate var binding: Binding<NSWindow?>
+        private var binding: Binding<NSWindow?>
+        private var bindingGeneration: UInt = 0
+        private var reportGeneration: UInt = 0
 
-        fileprivate init(binding: Binding<NSWindow?>) {
+        init(binding: Binding<NSWindow?>) {
             self.binding = binding
         }
 
-        fileprivate func report(_ window: NSWindow?) {
-            Task { @MainActor [weak self] in
-                guard let self, binding.wrappedValue !== window else { return }
-                binding.wrappedValue = window
+        func updateBinding(_ binding: Binding<NSWindow?>) {
+            bindingGeneration &+= 1
+            reportGeneration &+= 1
+            self.binding = binding
+        }
+
+        @discardableResult
+        func report(_ window: NSWindow?) -> Task<Void, Never> {
+            reportGeneration &+= 1
+            let expectedBindingGeneration = bindingGeneration
+            let expectedReportGeneration = reportGeneration
+
+            return Task { @MainActor [weak self] in
+                guard let self,
+                      bindingGeneration == expectedBindingGeneration,
+                      reportGeneration == expectedReportGeneration else {
+                    return
+                }
+
+                let currentBinding = binding
+                // A custom binding getter can replace the binding or enqueue another report.
+                guard currentBinding.wrappedValue !== window,
+                      bindingGeneration == expectedBindingGeneration,
+                      reportGeneration == expectedReportGeneration else {
+                    return
+                }
+                currentBinding.wrappedValue = window
             }
         }
     }
@@ -52,7 +78,7 @@ public struct WindowAccessor: NSViewRepresentable {
     }
 
     public func updateNSView(_ nsView: ReportingView, context: Context) {
-        context.coordinator.binding = binding
+        context.coordinator.updateBinding(binding)
         context.coordinator.report(nsView.window)
     }
 }
